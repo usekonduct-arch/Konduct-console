@@ -19,11 +19,13 @@ type BtnProps = {
   busy?: boolean;
   disabled?: boolean;
   small?: boolean;
+  /** Spoken name and tooltip, for buttons that show only a symbol. */
+  label?: string;
 };
 
-export function Button({ children, onClick, kind = "primary", type = "button", busy, disabled, small }: BtnProps) {
+export function Button({ children, onClick, kind = "primary", type = "button", busy, disabled, small, label }: BtnProps) {
   return (
-    <button type={type} className={`btn btn-${kind}${small ? " btn-sm" : ""}`} onClick={onClick} disabled={disabled || busy} aria-busy={busy}>
+    <button type={type} className={`btn btn-${kind}${small ? " btn-sm" : ""}`} onClick={onClick} disabled={disabled || busy} aria-busy={busy} aria-label={label} title={label}>
       {busy ? <span className="spinner" aria-hidden="true" /> : null}
       <span>{children}</span>
     </button>

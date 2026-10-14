@@ -22,6 +22,8 @@ export default function Dashboard() {
   const flags = useLiveQuery(query(collection(db, "flags"), where("status", "==", "open"), limit(200)), "dash-flags");
   const invites = useLiveQuery(query(collection(db, "driverInvites"), where("status", "==", "pending"), limit(200)), "dash-invites");
   const switches = useLiveDoc(doc(db, "config/switches"), "dash-switches");
+  const parks = useLiveQuery(query(collection(db, "parks"), where("active", "==", true)), "dash-parks");
+  const buses = parks.data.reduce((t, p) => t + (p.busCount ?? 0), 0);
 
   const sw: Partial<Row> = switches.data ?? {};
   const overdue = disputes.data.filter((d) => (d.slaDueAtMs ?? Infinity) < Date.now()).length;
@@ -43,6 +45,7 @@ export default function Dashboard() {
         <Stat label="Deposits nobody could match" value={deposits.data.length} href="#/deposits" tone="warn" loading={deposits.loading} />
         <Stat label="Open security flags" value={flags.data.length} href="#/switches" tone="bad" loading={flags.loading} />
         <Stat label="Drivers invited, not yet linked" value={invites.data.length} href="#/drivers" loading={invites.loading} />
+        <Stat label={`Buses waiting at ${parks.data.length === 1 ? "1 park" : `${parks.data.length} parks`}`} value={buses} href="#/parks" loading={parks.loading} />
       </div>
       <Card title="Getting a vehicle on Konduct">
         <ol className="steps">

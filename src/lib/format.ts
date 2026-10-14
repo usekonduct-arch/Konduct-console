@@ -44,3 +44,13 @@ export function koboFromNaira(input: string): number | null {
   const n = Number(input.replace(/[,\s₦]/g, ""));
   return Number.isInteger(n) && n > 0 ? n * 100 : null;
 }
+
+/** "★★★★☆" for a 1 to 5 star rating. */
+export const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n);
+
+/** "4.6 ★ (23)" from a driver's users/{uid} totals; null before their first rating. */
+export function averageRating(u: Record<string, unknown> | null | undefined): string | null {
+  const count = Number(u?.ratingCount ?? 0);
+  if (!count) return null;
+  return `${(Number(u?.ratingSum ?? 0) / count).toFixed(1)} ★ (${count})`;
+}

@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { collection, limit, orderBy, query } from "firebase/firestore";
+import { collection, limit, orderBy, query, where } from "firebase/firestore";
 
 import { call, db } from "../lib/firebase";
-import { when } from "../lib/format";
+import { averageRating, when } from "../lib/format";
 import { useLiveQuery } from "../lib/live";
 import { can, useSession } from "../lib/session";
 import { Badge, Button, Card, Check, Dialog, Empty, ErrorText, Field, Loading, Notice, PageHead, Select, useAction, useToast } from "../ui";
@@ -20,6 +20,8 @@ export default function Drivers() {
   const [inviting, setInviting] = useState(false);
   const [resetFor, setResetFor] = useState<string | null>(null);
   const invites = useLiveQuery(s.reader ? query(collection(db, "driverInvites"), orderBy("createdAt", "desc"), limit(200)) : null, `invites-${s.reader}`);
+  const drivers = useLiveQuery(s.reader ? query(collection(db, "users"), where("role", "==", "driver"), limit(500)) : null, `drivers-${s.reader}`);
+  const byUid = new Map(drivers.data.map((d) => [d.id, d]));
 
   return (
     <>
@@ -43,6 +45,7 @@ export default function Drivers() {
                     <th>Vehicle</th>
                     <th>Route</th>
                     <th>Status</th>
+                    <th>Rating</th>
                     <th>Invited</th>
                     <th />
                   </tr>
@@ -65,6 +68,9 @@ export default function Drivers() {
                         <td>
                           <Badge tone={st.tone}>{st.label}</Badge>
                           {i.status === "pending" && i.attempts ? <div className="muted">{i.attempts} wrong tries</div> : null}
+                        </td>
+                        <td className="nowrap">
+                          {averageRating(i.claimedBy ? byUid.get(i.claimedBy) : null) ?? <span className="muted">—</span>}
                         </td>
                         <td className="muted">{when(i.createdAt)}</td>
                         <td className="right">
@@ -106,7 +112,6 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
   const [plate, setPlate] = useState("");
   const [type, setType] = useState<"shuttle" | "bike">("shuttle");
   const [routeId, setRouteId] = useState("");
-  const [capacity, setCapacity] = useState("14");
   const [idSeen, setIdSeen] = useState(false);
   const [papers, setPapers] = useState(false);
   const [union, setUnion] = useState(false);
@@ -120,8 +125,6 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const cap = Number(capacity);
-    if (!Number.isInteger(cap) || cap < 1 || cap > 30) return a.setError("Seats must be a number from 1 to 30.");
     if (!route) return a.setError("Create a route first.");
     const r = await a.run(() =>
       call<{ vehicleId: string; onboardingCode: string }>("staffInviteDriver", {
@@ -131,7 +134,7 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
         plate: plate.trim(),
         type,
         routeId: route,
-        capacity: type === "bike" ? 1 : cap,
+        ...(type === "bike" ? { capacity: 1 } : {}),
         checks: { idSeen: true, vehiclePapersSeen: true, unionConfirmed: true },
       }),
     );
@@ -190,7 +193,7 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
               { value: "bike", label: "Bike (okada)" },
             ]}
           />
-          {type === "shuttle" ? <Field label="Passenger seats" value={capacity} onChange={setCapacity} inputMode="numeric" mono /> : <span />}
+          <p className="field-hint">{type === "shuttle" ? "Buses all have the same seats, set on the Vehicles page." : "Bikes carry one rider."}</p>
         </div>
         {routes.loading ? (
           <Loading />

@@ -1,22 +1,44 @@
-import { useState, type FormEvent } from "react";
-import { collection, limit, orderBy, query } from "firebase/firestore";
+import { useEffect, useState, type FormEvent } from "react";
+import { collection, doc, limit, orderBy, query } from "firebase/firestore";
 
 import { call, db } from "../lib/firebase";
 import { when } from "../lib/format";
-import { useLiveQuery, type Row } from "../lib/live";
+import { estimate } from "../lib/geo";
+import { useLiveDoc, useLiveQuery, type Row } from "../lib/live";
 import { can, useSession } from "../lib/session";
-import { Badge, Button, Card, Dialog, Empty, ErrorText, Field, Loading, Notice, PageHead, Select, useAction, useToast } from "../ui";
+import { Badge, Button, Card, Check, Dialog, Empty, ErrorText, Field, Loading, Notice, PageHead, Select, useAction, useToast } from "../ui";
 import { StickerDialog, type StickerData } from "./Sticker";
 
 type VStatus = "active" | "suspended" | "retired";
 const TONE: Record<string, "good" | "warn" | "neutral"> = { active: "good", suspended: "warn", retired: "neutral" };
 
+/** Backend RULES.defaultBusSeats, until an admin sets config/fleet. */
+const DEFAULT_BUS_SEATS = 7;
+
+/** Seats paid by scan on the bus's current trip; a trip that has timed out counts as empty. */
+const seatsTaken = (v: Row, now: number) => (v.load && now < v.load.expiresAtMs ? (v.load.taken as number) : 0);
+
+/** Re-renders every [ms], for values that change with time rather than with data. */
+function useNow(ms: number) {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+  return now;
+}
+
 export default function Vehicles() {
   const s = useSession();
   const vehicles = useLiveQuery(s.reader ? query(collection(db, "vehicles"), orderBy("createdAt", "desc"), limit(300)) : null, `vehicles-${s.reader}`);
   const routes = useLiveQuery(query(collection(db, "routes")), "vehicle-routes");
+  const fleet = useLiveDoc(doc(db, "config/fleet"), "vehicle-fleet");
+  const busSeats = (fleet.data?.busSeats as number | undefined) ?? DEFAULT_BUS_SEATS;
+  const now = useNow(30_000);
+  const [editSeats, setEditSeats] = useState(false);
   const [search, setSearch] = useState("");
   const [reissue, setReissue] = useState<{ id: string; plate: string } | null>(null);
+  const [routeFor, setRouteFor] = useState<{ id: string; plate: string; currentRoute?: Row } | null>(null);
   const [statusFor, setStatusFor] = useState<Row | null>(null);
   const routeName = (id: string) => routes.data.find((r) => r.id === id)?.name ?? id;
 
@@ -27,6 +49,21 @@ export default function Vehicles() {
     <>
       <PageHead kicker="Vehicles & stickers" title="The fleet" />
       <Notice>Printing a new sticker cancels the old one at once. Use it when a sticker is damaged, lost, or you suspect someone copied it.</Notice>
+      <Card
+        title="Seats per bus"
+        actions={
+          can.setBusSeats(s.role) ? (
+            <Button small kind="ghost" onClick={() => setEditSeats(true)}>
+              Change
+            </Button>
+          ) : null
+        }
+      >
+        <p>
+          Every bus seats <b>{fleet.loading ? "…" : busSeats}</b>. Konduct refuses scans past that on one trip, and riders see an estimate of the seats left (cash riders
+          aren't counted). A trip clears when the driver taps <b>New trip</b>, or on its own once nobody has scanned for 15 minutes.
+        </p>
+      </Card>
       {s.reader ? (
         <Card
           tight
@@ -49,6 +86,8 @@ export default function Vehicles() {
                   <tr>
                     <th>Plate</th>
                     <th>Route</th>
+                    <th>Trip route</th>
+                    <th>Seats paid now</th>
                     <th>Driver</th>
                     <th>Sticker</th>
                     <th>Status</th>
@@ -61,10 +100,31 @@ export default function Vehicles() {
                       <td>
                         <b className="mono">{v.plate}</b>
                         <div className="muted">
-                          {v.type === "bike" ? "Bike" : `Shuttle · ${v.capacity} seats`}
+                          {v.type === "bike" ? "Bike" : `Bus · ${busSeats} seats`}
                         </div>
                       </td>
                       <td className="muted">{routeName(v.routeId)}</td>
+                      <td>
+                        {v.currentRoute ? (
+                          <>
+                            {v.currentRoute.fromName} → {v.currentRoute.toName}
+                            <div className="muted">
+                              ~{v.currentRoute.etaMin} min · {v.currentRoute.setByStaff ? "set by staff" : "set by driver"} {when(v.currentRoute.setAtMs)}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="muted">Not set</span>
+                        )}
+                      </td>
+                      <td className="mono">
+                        {v.type === "bike" ? (
+                          <span className="muted">—</span>
+                        ) : (
+                          <span className={seatsTaken(v, now) >= busSeats ? "seat-full" : undefined}>
+                            {seatsTaken(v, now)} / {busSeats}
+                          </span>
+                        )}
+                      </td>
                       <td>{v.driverUid ? <Badge tone="good">Linked</Badge> : <Badge tone="warn">Waiting</Badge>}</td>
                       <td>
                         {v.tokenVersion ? (
@@ -87,6 +147,11 @@ export default function Vehicles() {
                             {v.tokenVersion ? "New sticker" : "Print sticker"}
                           </Button>
                         ) : null}{" "}
+                        {can.setVehicleRoute(s.role) && v.status === "active" ? (
+                          <Button small kind="ghost" onClick={() => setRouteFor({ id: v.id, plate: v.plate, currentRoute: v.currentRoute })}>
+                            Route
+                          </Button>
+                        ) : null}{" "}
                         {can.setVehicleStatus(s.role) ? (
                           <Button small kind="ghost" onClick={() => setStatusFor(v)}>
                             Status
@@ -100,33 +165,90 @@ export default function Vehicles() {
             </div>
           )}
         </Card>
-      ) : can.issueStickers(s.role) ? (
-        <ByIdCard onPick={(id) => setReissue({ id, plate: "" })} />
+      ) : can.issueStickers(s.role) || can.setVehicleRoute(s.role) ? (
+        <ByIdCard
+          onSticker={can.issueStickers(s.role) ? (id) => setReissue({ id, plate: "" }) : undefined}
+          onRoute={can.setVehicleRoute(s.role) ? (id) => setRouteFor({ id, plate: "" }) : undefined}
+        />
       ) : null}
+      {routeFor ? <RouteDialog vehicle={routeFor} onClose={() => setRouteFor(null)} /> : null}
       {reissue ? <ReissueDialog vehicle={reissue} onClose={() => setReissue(null)} /> : null}
       {statusFor ? <StatusDialog vehicle={statusFor} onClose={() => setStatusFor(null)} /> : null}
+      {editSeats ? <SeatsDialog seats={busSeats} onClose={() => setEditSeats(false)} /> : null}
     </>
   );
 }
 
 /** Agents can't list vehicles; the vehicle ID is printed small at the bottom of every sticker. */
-function ByIdCard({ onPick }: { onPick: (id: string) => void }) {
+function ByIdCard({ onSticker, onRoute }: { onSticker?: (id: string) => void; onRoute?: (id: string) => void }) {
   const [id, setId] = useState("");
+  const v = id.trim();
   return (
-    <Card title="Replace a sticker">
-      <form
-        className="stack"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (id.trim()) onPick(id.trim());
-        }}
-      >
-        <Field label="Vehicle ID" value={id} onChange={setId} mono hint="Printed small at the bottom of the old sticker. Ask ops if it's unreadable." />
-        <Button type="submit" disabled={!id.trim()}>
-          Continue
-        </Button>
-      </form>
+    <Card title={onSticker ? "Replace a sticker or change a trip route" : "Change a bus's trip route"}>
+      <div className="stack">
+        <Field label="Vehicle ID" value={id} onChange={setId} mono hint="Printed small at the bottom of the sticker. Ask ops if it's unreadable." />
+        {onRoute ? (
+          <Button disabled={!v} onClick={() => onRoute(v)}>
+            Change trip route
+          </Button>
+        ) : null}
+        {onSticker ? (
+          <Button kind={onRoute ? "ghost" : "primary"} disabled={!v} onClick={() => onSticker(v)}>
+            Replace sticker
+          </Button>
+        ) : null}
+      </div>
     </Card>
+  );
+}
+
+/** Staff help a driver: where the bus is going on this trip. */
+function RouteDialog({ vehicle, onClose }: { vehicle: { id: string; plate: string; currentRoute?: Row }; onClose: () => void }) {
+  const toast = useToast();
+  const landmarks = useLiveQuery(query(collection(db, "landmarks")), "route-landmarks");
+  const places = landmarks.data.filter((l) => l.active).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const [from, setFrom] = useState<string>(vehicle.currentRoute?.fromId ?? "");
+  const [to, setTo] = useState<string>(vehicle.currentRoute?.toId ?? "");
+  const [newTrip, setNewTrip] = useState(false);
+  const a = useAction();
+  const fromId = from || places[0]?.id || "";
+  const toId = to || places.find((l) => l.id !== fromId)?.id || "";
+  const fa = places.find((l) => l.id === fromId);
+  const tb = places.find((l) => l.id === toId);
+  const e = fa && tb && fa.id !== tb.id ? estimate({ lat: fa.lat, lng: fa.lng }, { lat: tb.lat, lng: tb.lng }) : null;
+  const options = places.map((l) => ({ value: l.id as string, label: l.name as string }));
+
+  async function save(ev: FormEvent) {
+    ev.preventDefault();
+    if (!e) return a.setError("Pick two different places.");
+    const r = await a.run(() => call<{ fromName: string; toName: string; etaMin: number }>("staffSetVehicleRoute", { vehicleId: vehicle.id, fromId, toId, newTrip }));
+    if (r) {
+      toast(`${vehicle.plate || "The bus"}: ${r.fromName} → ${r.toName}, about ${r.etaMin} min.`);
+      onClose();
+    }
+  }
+
+  return (
+    <Dialog title={vehicle.plate ? `Trip route for ${vehicle.plate}` : "Trip route"} onClose={onClose}>
+      {landmarks.loading ? (
+        <Loading />
+      ) : places.length < 2 ? (
+        <Notice tone="warn">
+          An admin needs to add at least two <a href="#/landmarks">landmarks</a> first.
+        </Notice>
+      ) : (
+        <form className="stack" onSubmit={save}>
+          <Select label="From" value={fromId} onChange={setFrom} options={options} />
+          <Select label="To" value={toId} onChange={setTo} options={options} />
+          <p className="small">{e ? `About ${e.minutes} min (${e.km} km). Riders can rate the driver after that.` : "Pick two different places."}</p>
+          <Check label="The bus has emptied: start a new trip (clears seats paid by scan)" checked={newTrip} onChange={setNewTrip} />
+          <ErrorText>{a.error}</ErrorText>
+          <Button type="submit" busy={a.busy} disabled={!e}>
+            Save route
+          </Button>
+        </form>
+      )}
+    </Dialog>
   );
 }
 
@@ -183,6 +305,33 @@ function StatusDialog({ vehicle, onClose }: { vehicle: Row; onClose: () => void 
         />
         <ErrorText>{a.error}</ErrorText>
         <Button type="submit" busy={a.busy} disabled={status === vehicle.status}>
+          Save
+        </Button>
+      </form>
+    </Dialog>
+  );
+}
+
+function SeatsDialog({ seats, onClose }: { seats: number; onClose: () => void }) {
+  const toast = useToast();
+  const [value, setValue] = useState(String(seats));
+  const a = useAction();
+  const n = Number(value);
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!Number.isInteger(n) || n < 1 || n > 30) return a.setError("Seats must be a whole number from 1 to 30.");
+    const r = await a.run(() => call("staffSetFleet", { busSeats: n }));
+    if (r) {
+      toast(`Every bus now seats ${n}.`);
+      onClose();
+    }
+  }
+  return (
+    <Dialog title="Seats per bus" onClose={onClose}>
+      <form className="stack" onSubmit={save}>
+        <Field label="Passenger seats on every bus" value={value} onChange={setValue} inputMode="numeric" mono hint="Applies to the next scan on every bus. Bikes aren't counted." />
+        <ErrorText>{a.error}</ErrorText>
+        <Button type="submit" busy={a.busy} disabled={n === seats}>
           Save
         </Button>
       </form>

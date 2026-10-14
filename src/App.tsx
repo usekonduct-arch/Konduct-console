@@ -8,6 +8,9 @@ import Dashboard from "./pages/Dashboard";
 import Deposits from "./pages/Deposits";
 import Disputes from "./pages/Disputes";
 import Drivers from "./pages/Drivers";
+import Landmarks from "./pages/Landmarks";
+import Parks from "./pages/Parks";
+import Ratings from "./pages/Ratings";
 import People from "./pages/People";
 import RoutesPage from "./pages/Routes";
 import Staff from "./pages/Staff";
@@ -21,8 +24,11 @@ type Page = { path: string; label: string; icon: string; component: ComponentTyp
 const PAGES: Page[] = [
   { path: "", label: "Overview", icon: "◎", component: Dashboard, show: (_r, reader) => reader },
   { path: "drivers", label: "Drivers", icon: "☺", component: Drivers, show: (r, reader) => reader || can.inviteDrivers(r) },
-  { path: "vehicles", label: "Vehicles & stickers", icon: "▣", component: Vehicles, show: (r, reader) => reader || can.issueStickers(r) },
+  { path: "vehicles", label: "Vehicles & stickers", icon: "▣", component: Vehicles, show: (r, reader) => reader || can.issueStickers(r) || can.setVehicleRoute(r) },
   { path: "routes", label: "Routes & fares", icon: "↝", component: RoutesPage, show: () => true },
+  { path: "parks", label: "Parks", icon: "⌂", component: Parks, show: () => true },
+  { path: "landmarks", label: "Landmarks", icon: "⚲", component: Landmarks, show: () => true },
+  { path: "ratings", label: "Driver ratings", icon: "☆", component: Ratings, show: (_r, reader) => reader },
   { path: "people", label: "Riders & people", icon: "⚇", component: People, show: (r, reader) => reader || can.setUserStatus(r) },
   { path: "approvals", label: "Approvals", icon: "✓", component: Approvals, show: (_r, reader) => reader },
   { path: "disputes", label: "Disputes", icon: "⚑", component: Disputes, show: (_r, reader) => reader },

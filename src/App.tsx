@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 
 import { can, useSession, type StaffRole } from "./lib/session";
-import { EnrolMfa, NotStaff, ReauthMfa, SignIn, VerifyEmail } from "./pages/Auth";
+import { ChangePasswordDialog, EnrolMfa, NotStaff, ReauthMfa, SignIn, VerifyEmail } from "./pages/Auth";
 import Approvals from "./pages/Approvals";
 import Audit from "./pages/Audit";
 import Dashboard from "./pages/Dashboard";
@@ -14,6 +14,7 @@ import Ratings from "./pages/Ratings";
 import People from "./pages/People";
 import RoutesPage from "./pages/Routes";
 import Staff from "./pages/Staff";
+import Support from "./pages/Support";
 import Switches from "./pages/Switches";
 import Vehicles from "./pages/Vehicles";
 import Waitlist from "./pages/Waitlist";
@@ -23,7 +24,7 @@ type Page = { path: string; label: string; icon: string; component: ComponentTyp
 
 const PAGES: Page[] = [
   { path: "", label: "Overview", icon: "◎", component: Dashboard, show: (_r, reader) => reader },
-  { path: "drivers", label: "Drivers", icon: "☺", component: Drivers, show: (r, reader) => reader || can.inviteDrivers(r) },
+  { path: "drivers", label: "Drivers & sign-up", icon: "☺", component: Drivers, show: (r, reader) => reader || can.inviteDrivers(r) },
   { path: "vehicles", label: "Vehicles & stickers", icon: "▣", component: Vehicles, show: (r, reader) => reader || can.issueStickers(r) || can.setVehicleRoute(r) },
   { path: "routes", label: "Routes & fares", icon: "↝", component: RoutesPage, show: () => true },
   { path: "parks", label: "Parks", icon: "⌂", component: Parks, show: () => true },
@@ -31,6 +32,7 @@ const PAGES: Page[] = [
   { path: "ratings", label: "Driver ratings", icon: "☆", component: Ratings, show: (_r, reader) => reader },
   { path: "people", label: "Riders & people", icon: "⚇", component: People, show: (r, reader) => reader || can.setUserStatus(r) },
   { path: "approvals", label: "Approvals", icon: "✓", component: Approvals, show: (_r, reader) => reader },
+  { path: "support", label: "Support chats", icon: "✉", component: Support, show: (_r, reader) => reader },
   { path: "disputes", label: "Disputes", icon: "⚑", component: Disputes, show: (_r, reader) => reader },
   { path: "deposits", label: "Deposits", icon: "₦", component: Deposits, show: (_r, reader) => reader },
   { path: "switches", label: "Switches & flags", icon: "⏻", component: Switches, show: (_r, reader) => reader },
@@ -63,6 +65,7 @@ export default function App() {
   const s = useSession();
   const path = useHashPath();
   const [menu, setMenu] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   useEffect(() => setMenu(false), [path]);
 
   switch (s.stage) {
@@ -117,12 +120,16 @@ export default function App() {
             <b>{s.user?.email}</b>
             <span>{s.role ? ROLE_NAMES[s.role] : ""}</span>
           </div>
+          <button type="button" className="link link-light" onClick={() => setChangingPassword(true)}>
+            Change password
+          </button>
           <button type="button" className="link link-light" onClick={s.signOut}>
             Sign out
           </button>
         </div>
       </aside>
       <main className="main">{Current ? <Current key={page.path} /> : <p className="empty">Your role ({s.role}) has nothing to do in the console yet.</p>}</main>
+      {changingPassword ? <ChangePasswordDialog onClose={() => setChangingPassword(false)} /> : null}
     </div>
   );
 }

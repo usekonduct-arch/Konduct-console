@@ -1,12 +1,15 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import QRCode from "qrcode";
 import {
+  EmailAuthProvider,
   getMultiFactorResolver,
   multiFactor,
+  reauthenticateWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   TotpMultiFactorGenerator,
+  updatePassword,
   type MultiFactorError,
   type MultiFactorResolver,
   type TotpSecret,
@@ -14,7 +17,7 @@ import {
 
 import { auth } from "../lib/firebase";
 import { useSession } from "../lib/session";
-import { Button, Copy, ErrorText, Field, Mark, Notice } from "../ui";
+import { Button, Copy, Dialog, ErrorText, Field, Mark, Notice, useToast } from "../ui";
 
 function authMessage(code: string): string {
   switch (code) {
@@ -35,6 +38,12 @@ function authMessage(code: string): string {
       return "For your safety, sign out and sign in again, then set up the authenticator straight away.";
     case "auth/unverified-email":
       return "Verify your email first.";
+    case "auth/invalid-email":
+      return "That doesn't look like an email address.";
+    case "auth/weak-password":
+      return "Choose a stronger password.";
+    case "auth/missing-password":
+      return "Enter your current password.";
     default:
       return "Something went wrong. Try again.";
   }
@@ -69,7 +78,7 @@ export function SignIn() {
   const [resolver, setResolver] = useState<MultiFactorResolver | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -94,16 +103,7 @@ export function SignIn() {
     }
   }
 
-  async function forgot() {
-    setError(null);
-    if (!email.includes("@")) return setError("Type your staff email above first.");
-    try {
-      await sendPasswordResetEmail(auth, email.trim());
-    } catch {
-      // Same answer whether or not the account exists.
-    }
-    setInfo(`If ${email.trim()} has an account, a reset link is on its way.`);
-  }
+  if (resetting) return <ResetPassword initialEmail={email} onBack={() => setResetting(false)} />;
 
   if (resolver) {
     return (
@@ -128,11 +128,10 @@ export function SignIn() {
         <Field label="Email" value={email} onChange={setEmail} type="email" autoComplete="username" inputMode="email" required autoFocus />
         <Field label="Password" value={password} onChange={setPassword} type="password" autoComplete="current-password" required />
         <ErrorText>{error}</ErrorText>
-        {info ? <Notice>{info}</Notice> : null}
         <Button type="submit" busy={busy}>
           Continue
         </Button>
-        <button type="button" className="link" onClick={forgot}>
+        <button type="button" className="link" onClick={() => setResetting(true)}>
           Forgot your password?
         </button>
       </form>
@@ -299,5 +298,146 @@ export function NotStaff() {
         </button>
       </div>
     </Shell>
+  );
+}
+
+/** Sends Firebase's reset email. The link's "Continue" button comes back to this console. */
+async function sendReset(email: string) {
+  try {
+    await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/` });
+  } catch (e) {
+    // This console's address isn't on Firebase's allowed list: send the plain link instead.
+    if (codeOf(e) === "auth/unauthorized-continue-uri" || codeOf(e) === "auth/invalid-continue-uri") await sendPasswordResetEmail(auth, email);
+    else throw e;
+  }
+}
+
+/** "Forgot your password?": the same answer whether or not the account exists. */
+function ResetPassword({ initialEmail, onBack }: { initialEmail: string; onBack: () => void }) {
+  const [email, setEmail] = useState(initialEmail.trim());
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [wait, setWait] = useState(0);
+
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+
+  async function send(e?: FormEvent) {
+    e?.preventDefault();
+    const to = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(to)) return setError("Enter your staff email.");
+    setBusy(true);
+    setError(null);
+    try {
+      await sendReset(to);
+    } catch (err) {
+      const code = codeOf(err);
+      // An unknown email gets the same answer as a known one.
+      if (code !== "auth/user-not-found") {
+        setBusy(false);
+        return setError(authMessage(code));
+      }
+    }
+    setBusy(false);
+    setSentTo(to);
+    setWait(60);
+  }
+
+  if (sentTo) {
+    return (
+      <Shell title="Check your email" lead={<>If <b>{sentTo}</b> has a staff account, a reset link is on its way.</>}>
+        <div className="stack">
+          <ol className="steps">
+            <li>Open the email from Konduct and click the link.</li>
+            <li>Choose a new password (at least 10 characters).</li>
+            <li>Come back here and sign in with it. Your authenticator app doesn't change.</li>
+          </ol>
+          <p className="small">Nothing after a few minutes? Check spam or junk, and make sure the address is right.</p>
+          <ErrorText>{error}</ErrorText>
+          <Button onClick={onBack}>Back to sign in</Button>
+          <Button kind="ghost" onClick={() => send()} busy={busy} disabled={wait > 0}>
+            {wait > 0 ? `Send again in ${wait}s` : "Send it again"}
+          </Button>
+          <button type="button" className="link" onClick={() => setSentTo(null)}>
+            Use a different email
+          </button>
+        </div>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell title="Reset your password" lead="We'll email you a link to choose a new one.">
+      <form className="stack" onSubmit={send}>
+        <Field label="Staff email" value={email} onChange={setEmail} type="email" autoComplete="username" inputMode="email" required autoFocus />
+        <ErrorText>{error}</ErrorText>
+        <Button type="submit" busy={busy}>
+          Send reset link
+        </Button>
+        <button type="button" className="link" onClick={onBack}>
+          Back to sign in
+        </button>
+      </form>
+    </Shell>
+  );
+}
+
+/** Staff must type their current password and an authenticator code before setting a new one. */
+export function ChangePasswordDialog({ onClose }: { onClose: () => void }) {
+  const toast = useToast();
+  const [current, setCurrent] = useState("");
+  const [code, setCode] = useState("");
+  const [next, setNext] = useState("");
+  const [again, setAgain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (next.length < 10) return setError("Use at least 10 characters for a staff password.");
+    if (next === current) return setError("Pick a password different from the current one.");
+    if (next !== again) return setError("The two new passwords don't match.");
+    const user = auth.currentUser;
+    if (!user?.email) return setError("Sign in again first.");
+    setBusy(true);
+    setError(null);
+    try {
+      try {
+        await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, current));
+      } catch (err) {
+        if (codeOf(err) !== "auth/multi-factor-auth-required") throw err;
+        const resolver = getMultiFactorResolver(auth, err as MultiFactorError);
+        const hint = resolver.hints.find((h) => h.factorId === TotpMultiFactorGenerator.FACTOR_ID);
+        if (!hint) throw Object.assign(new Error(), { code: "auth/operation-not-allowed" });
+        await resolver.resolveSignIn(TotpMultiFactorGenerator.assertionForSignIn(hint.uid, code.replace(/\s/g, "")));
+      }
+      await updatePassword(auth.currentUser!, next);
+      toast("Password changed. Use the new one next time you sign in.");
+      onClose();
+    } catch (err) {
+      const c = codeOf(err);
+      setError(c === "auth/invalid-credential" || c === "auth/wrong-password" ? "Your current password isn't right." : authMessage(c));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog title="Change your password" onClose={onClose}>
+      <form className="stack" onSubmit={save}>
+        <Field label="Current password" value={current} onChange={setCurrent} type="password" autoComplete="current-password" required />
+        <Field label="Authenticator code" value={code} onChange={setCode} inputMode="numeric" autoComplete="one-time-code" mono maxLength={7} hint="The 6-digit code for Konduct Console." />
+        <Field label="New password" value={next} onChange={setNext} type="password" autoComplete="new-password" required hint="At least 10 characters." />
+        <Field label="New password again" value={again} onChange={setAgain} type="password" autoComplete="new-password" required />
+        <ErrorText>{error}</ErrorText>
+        <Button type="submit" busy={busy} disabled={!current || code.replace(/\s/g, "").length !== 6 || !next || !again}>
+          Change password
+        </Button>
+      </form>
+    </Dialog>
   );
 }

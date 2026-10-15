@@ -82,6 +82,7 @@ export const can = {
   assignDeposits: (r: StaffRole | null) => r === "ops" || r === "admin" || r === "support",
   decideApprovals: (r: StaffRole | null) => r === "ops" || r === "admin",
   handleDisputes: (r: StaffRole | null) => r === "support" || r === "ops" || r === "admin",
+  answerSupport: (r: StaffRole | null) => r === "support" || r === "ops" || r === "admin",
   setSwitches: (r: StaffRole | null) => r === "admin",
   grantRoles: (r: StaffRole | null) => r === "admin",
   readAudit: (r: StaffRole | null) => r === "admin" || r === "auditor",

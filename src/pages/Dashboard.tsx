@@ -2,7 +2,7 @@ import { collection, doc, limit, query, where } from "firebase/firestore";
 
 import { db } from "../lib/firebase";
 import { useLiveDoc, useLiveQuery, type Row } from "../lib/live";
-import { useSession } from "../lib/session";
+import { can, useSession } from "../lib/session";
 import { Badge, Card, Notice, PageHead } from "../ui";
 
 function Stat({ label, value, href, tone, loading }: { label: string; value: number; href: string; tone?: "warn" | "bad"; loading: boolean }) {
@@ -22,6 +22,8 @@ export default function Dashboard() {
   const flags = useLiveQuery(query(collection(db, "flags"), where("status", "==", "open"), limit(200)), "dash-flags");
   const invites = useLiveQuery(query(collection(db, "driverInvites"), where("status", "==", "pending"), limit(200)), "dash-invites");
   const switches = useLiveDoc(doc(db, "config/switches"), "dash-switches");
+  const support = useLiveQuery(query(collection(db, "supportThreads"), where("status", "==", "open"), limit(200)), "dash-support");
+  const waiting = support.data.filter((t) => t.lastFrom === "member").length;
   const parks = useLiveQuery(query(collection(db, "parks"), where("active", "==", true)), "dash-parks");
   const buses = parks.data.reduce((t, p) => t + (p.busCount ?? 0), 0);
 
@@ -31,7 +33,13 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHead kicker="Overview" title={`Hello${s.user?.email ? `, ${s.user.email.split("@")[0]}` : ""}`} />
+      <PageHead kicker="Overview" title={`Hello${s.user?.email ? `, ${s.user.email.split("@")[0]}` : ""}`}>
+        {can.inviteDrivers(s.role) ? (
+          <a className="btn btn-primary" href="#/drivers?new">
+            Sign up a driver
+          </a>
+        ) : null}
+      </PageHead>
       {paused.length ? (
         <Notice tone="bad">
           Paused right now: <b>{paused.join(", ")}</b>. <a href="#/switches">Open switches</a>
@@ -40,6 +48,7 @@ export default function Dashboard() {
         <Notice tone="good">Payments, top-ups and payouts are all running.</Notice>
       )}
       <div className="stats">
+        <Stat label="Support chats waiting for a reply" value={waiting} href="#/support" tone="warn" loading={support.loading} />
         <Stat label="Approvals waiting for a second person" value={approvals.data.length} href="#/approvals" tone="warn" loading={approvals.loading} />
         <Stat label={`Open disputes${overdue ? ` · ${overdue} overdue` : ""}`} value={disputes.data.length} href="#/disputes" tone={overdue ? "bad" : "warn"} loading={disputes.loading} />
         <Stat label="Deposits nobody could match" value={deposits.data.length} href="#/deposits" tone="warn" loading={deposits.loading} />
@@ -53,7 +62,7 @@ export default function Dashboard() {
             <a href="#/routes">Create the route</a> with its stops and fare.
           </li>
           <li>
-            <a href="#/drivers">Invite the driver</a> at the park after checking their ID, papers and union card. Give them the 8-character code in person.
+            <a href="#/drivers?new">Sign up the driver</a> at the park after checking their ID, papers and union card. Give them the 8-character code in person.
           </li>
           <li>
             <a href="#/vehicles">Print the sticker</a> for their vehicle and put it where riders can scan it.

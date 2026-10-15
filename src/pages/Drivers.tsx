@@ -17,7 +17,8 @@ const STATUS: Record<string, { label: string; tone: "good" | "warn" | "bad" | "n
 
 export default function Drivers() {
   const s = useSession();
-  const [inviting, setInviting] = useState(false);
+  // The Overview's "Sign up a driver" opens #/drivers?new.
+  const [inviting, setInviting] = useState(() => window.location.hash.includes("?new"));
   const [resetFor, setResetFor] = useState<string | null>(null);
   const invites = useLiveQuery(s.reader ? query(collection(db, "driverInvites"), orderBy("createdAt", "desc"), limit(200)) : null, `invites-${s.reader}`);
   const drivers = useLiveQuery(s.reader ? query(collection(db, "users"), where("role", "==", "driver"), limit(500)) : null, `drivers-${s.reader}`);
@@ -25,8 +26,8 @@ export default function Drivers() {
 
   return (
     <>
-      <PageHead kicker="Drivers" title="Onboard drivers at the park">
-        {can.inviteDrivers(s.role) ? <Button onClick={() => setInviting(true)}>Invite a driver</Button> : null}
+      <PageHead kicker="Drivers" title="Sign up drivers at the park">
+        {can.inviteDrivers(s.role) ? <Button onClick={() => setInviting(true)}>Sign up a driver</Button> : null}
       </PageHead>
       {s.reader ? (
         <Card tight>
@@ -176,7 +177,7 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Dialog title="Invite a driver" onClose={onClose} wide>
+    <Dialog title="Sign up a driver" onClose={onClose} wide>
       <form className="stack" onSubmit={submit}>
         <Notice>Do this at the park, with the driver in front of you.</Notice>
         <div className="grid-2">

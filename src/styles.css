@@ -961,3 +961,46 @@ tbody tr:hover {
   color: var(--coral);
   font-weight: 700;
 }
+
+/* support chat */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+.bubble {
+  max-width: 80%;
+  padding: 10px 14px 8px;
+  border-radius: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.bubble-member {
+  align-self: flex-start;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+}
+.bubble-staff {
+  align-self: flex-end;
+  background: var(--yellow);
+  border-bottom-right-radius: 4px;
+}
+.bubble-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--mute);
+}
+.bubble-staff .bubble-meta {
+  color: rgba(14, 17, 21, 0.65);
+}
+.clickable {
+  cursor: pointer;
+}
+textarea {
+  font: inherit;
+}

@@ -7,6 +7,7 @@ import { useLiveDoc, useLiveQuery, type Row } from "../lib/live";
 import { can, useSession } from "../lib/session";
 import { Badge, Button, Card, Check, Dialog, Empty, ErrorText, Field, Loading, Notice, PageHead, useAction, useToast } from "../ui";
 import { Who } from "./Approvals";
+import { AppVersionsCard, ReferralsCard } from "./AppSettings";
 
 const FLAGS: Record<string, string> = {
   velocity: "Too many payments in 10 minutes",
@@ -114,6 +115,8 @@ export default function Switches() {
           </ul>
         )}
       </Card>
+      <AppVersionsCard />
+      <ReferralsCard />
       <Card title={`Security flags (${open.length} open)`} tight>
         {flags.loading ? (
           <Loading />

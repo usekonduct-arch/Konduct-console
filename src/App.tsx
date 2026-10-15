@@ -2,6 +2,7 @@ import { useEffect, useState, type ComponentType } from "react";
 
 import { can, useSession, type StaffRole } from "./lib/session";
 import { ChangePasswordDialog, EnrolMfa, NotStaff, ReauthMfa, SignIn, VerifyEmail } from "./pages/Auth";
+import Ads from "./pages/Ads";
 import Approvals from "./pages/Approvals";
 import Audit from "./pages/Audit";
 import Dashboard from "./pages/Dashboard";
@@ -9,6 +10,7 @@ import Deposits from "./pages/Deposits";
 import Disputes from "./pages/Disputes";
 import Drivers from "./pages/Drivers";
 import Landmarks from "./pages/Landmarks";
+import Notifications from "./pages/Notifications";
 import Parks from "./pages/Parks";
 import Ratings from "./pages/Ratings";
 import People from "./pages/People";
@@ -32,6 +34,8 @@ const PAGES: Page[] = [
   { path: "ratings", label: "Driver ratings", icon: "☆", component: Ratings, show: (_r, reader) => reader },
   { path: "people", label: "Riders & people", icon: "⚇", component: People, show: (r, reader) => reader || can.setUserStatus(r) },
   { path: "approvals", label: "Approvals", icon: "✓", component: Approvals, show: (_r, reader) => reader },
+  { path: "notifications", label: "Notifications", icon: "♪", component: Notifications, show: (r, reader) => reader || can.message(r) },
+  { path: "ads", label: "Ads", icon: "▤", component: Ads, show: (r, reader) => reader || can.message(r) },
   { path: "support", label: "Support chats", icon: "✉", component: Support, show: (_r, reader) => reader },
   { path: "disputes", label: "Disputes", icon: "⚑", component: Disputes, show: (_r, reader) => reader },
   { path: "deposits", label: "Deposits", icon: "₦", component: Deposits, show: (_r, reader) => reader },

@@ -46,7 +46,10 @@ export default function Approvals() {
           </button>
         </div>
       </PageHead>
-      <Notice>Sensitive changes are requested by one person and only happen when a different person with the right role approves them. You can't approve your own request.</Notice>
+      <Notice>
+        Sensitive changes are requested by one person and only happen when someone with the right role approves them. Admins may approve their own requests;
+        everyone else needs a second person.
+      </Notice>
       <Card tight>
         {all.loading ? (
           <Loading />
@@ -70,7 +73,8 @@ export default function Approvals() {
                 {list.map((a) => {
                   const kind = KINDS[a.kind] ?? { label: a.kind, checkers: [] };
                   const mine = a.makerUid === s.user?.uid;
-                  const allowed = can.decideApprovals(s.role) && kind.checkers.includes(s.role!) && !mine;
+                  // Admins may approve their own requests (backend: decide() in approvals.ts).
+                  const allowed = can.decideApprovals(s.role) && kind.checkers.includes(s.role!) && (!mine || s.role === "admin");
                   return (
                     <tr key={a.id}>
                       <td>
@@ -83,6 +87,7 @@ export default function Approvals() {
                         {a.checkerUid ? (
                           <div className="muted">
                             decided by <Who uid={a.checkerUid} />
+                            {a.selfApproved ? " (own request)" : null}
                           </div>
                         ) : null}
                       </td>

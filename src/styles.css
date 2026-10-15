@@ -1004,3 +1004,68 @@ tbody tr:hover {
 textarea {
   font: inherit;
 }
+
+/* ------------------------------------------------- notifications and ads */
+
+.image-field {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+@media (max-width: 640px) {
+  .image-field {
+    grid-template-columns: 1fr;
+  }
+}
+.image-preview {
+  width: 100%;
+  max-height: 320px;
+  border-radius: 14px;
+  border: 1px dashed var(--line);
+  background: var(--paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.image-actions {
+  gap: 8px;
+  justify-items: start;
+}
+.ad-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.ad-thumb {
+  flex: none;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--paper-2);
+}
+.ad-thumb-carousel {
+  width: 96px;
+  height: 48px;
+}
+.ad-thumb-popup {
+  width: 48px;
+  height: 60px;
+}
+.button-row {
+  align-items: end;
+}
+.button-link {
+  flex-wrap: nowrap;
+  align-items: end;
+}
+.button-link .field {
+  flex: 1;
+}

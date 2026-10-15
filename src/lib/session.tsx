@@ -86,4 +86,5 @@ export const can = {
   setSwitches: (r: StaffRole | null) => r === "admin",
   grantRoles: (r: StaffRole | null) => r === "admin",
   readAudit: (r: StaffRole | null) => r === "admin" || r === "auditor",
+  message: (r: StaffRole | null) => r === "ops" || r === "admin",
 };

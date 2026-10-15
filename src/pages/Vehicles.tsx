@@ -40,6 +40,8 @@ export default function Vehicles() {
   const [reissue, setReissue] = useState<{ id: string; plate: string } | null>(null);
   const [routeFor, setRouteFor] = useState<{ id: string; plate: string; currentRoute?: Row } | null>(null);
   const [statusFor, setStatusFor] = useState<Row | null>(null);
+  const [parkFor, setParkFor] = useState<{ id: string; plate: string; parkId?: string } | null>(null);
+  const parkHere = (v: Row) => (v.park && now < v.park.expiresAtMs ? (v.park as Row) : null);
   const routeName = (id: string) => routes.data.find((r) => r.id === id)?.name ?? id;
 
   const q = search.trim().toUpperCase().replace(/\s+/g, " ");
@@ -87,6 +89,7 @@ export default function Vehicles() {
                     <th>Plate</th>
                     <th>Route</th>
                     <th>Trip route</th>
+                    <th>At a park</th>
                     <th>Seats paid now</th>
                     <th>Driver</th>
                     <th>Sticker</th>
@@ -114,6 +117,16 @@ export default function Vehicles() {
                           </>
                         ) : (
                           <span className="muted">Not set</span>
+                        )}
+                      </td>
+                      <td>
+                        {parkHere(v) ? (
+                          <>
+                            {parkHere(v)!.name}
+                            <div className="muted">since {when(parkHere(v)!.atMs)}</div>
+                          </>
+                        ) : (
+                          <span className="muted">On the road</span>
                         )}
                       </td>
                       <td className="mono">
@@ -152,6 +165,11 @@ export default function Vehicles() {
                             Route
                           </Button>
                         ) : null}{" "}
+                        {can.setVehicleRoute(s.role) && v.status === "active" && v.driverUid ? (
+                          <Button small kind="ghost" onClick={() => setParkFor({ id: v.id, plate: v.plate, parkId: parkHere(v)?.id })}>
+                            Park
+                          </Button>
+                        ) : null}{" "}
                         {can.setVehicleStatus(s.role) ? (
                           <Button small kind="ghost" onClick={() => setStatusFor(v)}>
                             Status
@@ -169,9 +187,11 @@ export default function Vehicles() {
         <ByIdCard
           onSticker={can.issueStickers(s.role) ? (id) => setReissue({ id, plate: "" }) : undefined}
           onRoute={can.setVehicleRoute(s.role) ? (id) => setRouteFor({ id, plate: "" }) : undefined}
+          onPark={can.setVehicleRoute(s.role) ? (id) => setParkFor({ id, plate: "" }) : undefined}
         />
       ) : null}
       {routeFor ? <RouteDialog vehicle={routeFor} onClose={() => setRouteFor(null)} /> : null}
+      {parkFor ? <ParkDialog vehicle={parkFor} onClose={() => setParkFor(null)} /> : null}
       {reissue ? <ReissueDialog vehicle={reissue} onClose={() => setReissue(null)} /> : null}
       {statusFor ? <StatusDialog vehicle={statusFor} onClose={() => setStatusFor(null)} /> : null}
       {editSeats ? <SeatsDialog seats={busSeats} onClose={() => setEditSeats(false)} /> : null}
@@ -180,7 +200,7 @@ export default function Vehicles() {
 }
 
 /** Agents can't list vehicles; the vehicle ID is printed small at the bottom of every sticker. */
-function ByIdCard({ onSticker, onRoute }: { onSticker?: (id: string) => void; onRoute?: (id: string) => void }) {
+function ByIdCard({ onSticker, onRoute, onPark }: { onSticker?: (id: string) => void; onRoute?: (id: string) => void; onPark?: (id: string) => void }) {
   const [id, setId] = useState("");
   const v = id.trim();
   return (
@@ -190,6 +210,11 @@ function ByIdCard({ onSticker, onRoute }: { onSticker?: (id: string) => void; on
         {onRoute ? (
           <Button disabled={!v} onClick={() => onRoute(v)}>
             Change trip route
+          </Button>
+        ) : null}
+        {onPark ? (
+          <Button kind="ghost" disabled={!v} onClick={() => onPark(v)}>
+            Check in or out of a park
           </Button>
         ) : null}
         {onSticker ? (
@@ -332,6 +357,35 @@ function SeatsDialog({ seats, onClose }: { seats: number; onClose: () => void })
         <Field label="Passenger seats on every bus" value={value} onChange={setValue} inputMode="numeric" mono hint="Applies to the next scan on every bus. Bikes aren't counted." />
         <ErrorText>{a.error}</ErrorText>
         <Button type="submit" busy={a.busy} disabled={n === seats}>
+          Save
+        </Button>
+      </form>
+    </Dialog>
+  );
+}
+
+/** Staff at the park check a bus in (students there see it) or out (it's on the road). */
+function ParkDialog({ vehicle, onClose }: { vehicle: { id: string; plate: string; parkId?: string }; onClose: () => void }) {
+  const toast = useToast();
+  const parks = useLiveQuery(query(collection(db, "parks")), "park-picker");
+  const [parkId, setParkId] = useState<string>(vehicle.parkId ?? "");
+  const a = useAction();
+  const options = [{ value: "", label: "Not at a park (on the road)" }, ...parks.data.filter((p) => p.active).map((p) => ({ value: p.id as string, label: p.name as string }))];
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    const r = await a.run(() => call<{ parkName: string | null }>("staffSetVehiclePark", { vehicleId: vehicle.id, parkId: parkId || null }));
+    if (r) {
+      toast(r.parkName ? `${vehicle.plate || "The bus"} is checked in at ${r.parkName}.` : `${vehicle.plate || "The bus"} is on the road.`);
+      onClose();
+    }
+  }
+  return (
+    <Dialog title={vehicle.plate ? `Park for ${vehicle.plate}` : "Park"} onClose={onClose}>
+      <form className="stack" onSubmit={save}>
+        <Select label="Where is it?" value={parkId} onChange={setParkId} options={options} />
+        <Notice>Students at that park see this bus, where it's going and its free seats. A check-in lapses on its own after 2 hours.</Notice>
+        <ErrorText>{a.error}</ErrorText>
+        <Button type="submit" busy={a.busy} disabled={parkId === (vehicle.parkId ?? "")}>
           Save
         </Button>
       </form>

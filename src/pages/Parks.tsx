@@ -25,7 +25,11 @@ export default function Parks() {
   const [editing, setEditing] = useState<Row | "new" | null>(null);
   const [setting, setSetting] = useState<Row | null>(null);
   const sorted = [...parks.data].sort((a, b) => Number(b.active) - Number(a.active) || String(a.name).localeCompare(String(b.name)));
-  const total = parks.data.filter((p) => p.active).reduce((t, p) => t + (p.busCount ?? 0), 0);
+  // The riders' live board: buses whose drivers (or staff) checked them in at a park.
+  const board = useLiveQuery(query(collection(db, "liveBuses")), "parks-board");
+  const now = Date.now();
+  const atPark = (id: string) => board.data.filter((b) => b.park?.id === id && b.park.expiresAtMs > now);
+  const total = parks.data.filter((p) => p.active).reduce((t, p) => t + atPark(p.id).length, 0);
 
   return (
     <>
@@ -33,9 +37,10 @@ export default function Parks() {
         {can.editParks(s.role) ? <Button onClick={() => setEditing("new")}>New park</Button> : null}
       </PageHead>
       <Notice>
-        Riders and drivers see these counts in their apps, with the time they were last updated. Tap + when a bus arrives and − when one leaves.
+        Students see the buses checked in at each park, where each is going and about how many seats are left. Drivers check in from their app; you can do it for them on
+        the Vehicles page. The staff count is a fallback students see only when no bus has checked in there.
       </Notice>
-      <Card tight title={parks.loading || !parks.data.length ? undefined : `${total} ${total === 1 ? "bus" : "buses"} waiting across ${parks.data.filter((p) => p.active).length} parks`}>
+      <Card tight title={parks.loading || !parks.data.length ? undefined : `${total} ${total === 1 ? "bus" : "buses"} checked in across ${parks.data.filter((p) => p.active).length} parks`}>
         {parks.loading ? (
           <Loading />
         ) : parks.error ? (
@@ -48,7 +53,8 @@ export default function Parks() {
               <thead>
                 <tr>
                   <th>Park</th>
-                  <th>Buses there</th>
+                  <th>Checked in now</th>
+                  <th>Staff count</th>
                   <th>Updated</th>
                   <th>Status</th>
                   <th />
@@ -56,7 +62,7 @@ export default function Parks() {
               </thead>
               <tbody>
                 {sorted.map((p) => (
-                  <ParkRow key={p.id} park={p} onSet={() => setSetting(p)} onEdit={() => setEditing(p)} />
+                  <ParkRow key={p.id} park={p} buses={atPark(p.id)} onSet={() => setSetting(p)} onEdit={() => setEditing(p)} />
                 ))}
               </tbody>
             </table>
@@ -69,7 +75,7 @@ export default function Parks() {
   );
 }
 
-function ParkRow({ park: p, onSet, onEdit }: { park: Row; onSet: () => void; onEdit: () => void }) {
+function ParkRow({ park: p, buses, onSet, onEdit }: { park: Row; buses: Row[]; onSet: () => void; onEdit: () => void }) {
   const s = useSession();
   const a = useAction();
   const count = (p.busCount as number) ?? 0;
@@ -92,6 +98,14 @@ function ParkRow({ park: p, onSet, onEdit }: { park: Row; onSet: () => void; onE
             </>
           ) : null}
         </div>
+      </td>
+      <td>
+        <span className="counter-value">{buses.length}</span>
+        {buses.length ? (
+          <div className="muted small">
+            {buses.map((b) => `${b.plate} (${Math.max(0, b.capacity - (b.seatsResetAtMs > Date.now() ? b.seatsTaken : 0))} free)`).join(", ")}
+          </div>
+        ) : null}
       </td>
       <td className="nowrap">
         {can.countBuses(s.role) && p.active ? (

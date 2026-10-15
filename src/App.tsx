@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 
 import { can, useSession, type StaffRole } from "./lib/session";
-import { ChangePasswordDialog, EnrolMfa, NotStaff, ReauthMfa, SignIn, VerifyEmail } from "./pages/Auth";
+import { ChangePasswordDialog, ChoosePassword, EnrolMfa, NotStaff, ReauthMfa, SignIn, VerifyEmail } from "./pages/Auth";
 import Ads from "./pages/Ads";
 import Approvals from "./pages/Approvals";
 import Audit from "./pages/Audit";
@@ -89,6 +89,8 @@ export default function App() {
       return <ReauthMfa />;
     case "notStaff":
       return <NotStaff />;
+    case "choosePassword":
+      return <ChoosePassword />;
   }
 
   const pages = PAGES.filter((p) => p.show(s.role, s.reader));

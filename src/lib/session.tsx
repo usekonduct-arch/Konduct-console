@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { multiFactor, onIdTokenChanged, signOut, type User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
-import { auth } from "./firebase";
+import { auth, db } from "./firebase";
 
 export type StaffRole = "admin" | "ops" | "agent" | "marshal" | "support" | "auditor";
 export const STAFF_ROLES: StaffRole[] = ["admin", "ops", "agent", "marshal", "support", "auditor"];
@@ -9,9 +10,10 @@ export const STAFF_ROLES: StaffRole[] = ["admin", "ops", "agent", "marshal", "su
 /**
  * Where a signed-in person is on the way to using the console. Mirrors the backend's requireStaff
  * and the Firestore staffReader rule: verified email, an enrolled authenticator, a session that
- * actually used it, and a staff role.
+ * actually used it, and a staff role. Staff an admin added still have to replace the one-time
+ * password they were sent (choosePassword).
  */
-export type Stage = "loading" | "signedOut" | "verifyEmail" | "enrolMfa" | "reauthMfa" | "notStaff" | "ready";
+export type Stage = "loading" | "signedOut" | "verifyEmail" | "enrolMfa" | "reauthMfa" | "notStaff" | "choosePassword" | "ready";
 
 export type Session = {
   stage: Stage;
@@ -39,7 +41,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     else if (multiFactor(user).enrolledFactors.length === 0) stage = "enrolMfa";
     else if (!token.signInSecondFactor && !claims.firebase?.sign_in_second_factor) stage = "reauthMfa";
     else if (!role) stage = "notStaff";
-    else stage = "ready";
+    else stage = (await getDoc(doc(db, "users", user.uid)).catch(() => null))?.get("mustChangePassword") === true ? "choosePassword" : "ready";
     setState({ stage, user, role, reader });
   }
 
@@ -77,6 +79,7 @@ export const can = {
   editLandmarks: (r: StaffRole | null) => r === "admin",
   setVehicleRoute: (r: StaffRole | null) => r === "agent" || r === "marshal" || r === "ops" || r === "admin",
   setUserStatus: (r: StaffRole | null) => r === "support" || r === "agent" || r === "ops" || r === "admin",
+  editPeople: (r: StaffRole | null) => r === "admin",
   requestKyc: (r: StaffRole | null) => r === "ops" || r === "admin",
   requestAdjustment: (r: StaffRole | null) => r === "ops" || r === "admin",
   assignDeposits: (r: StaffRole | null) => r === "ops" || r === "admin" || r === "support",

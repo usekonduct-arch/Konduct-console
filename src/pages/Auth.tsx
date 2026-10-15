@@ -15,7 +15,7 @@ import {
   type TotpSecret,
 } from "firebase/auth";
 
-import { auth } from "../lib/firebase";
+import { auth, call } from "../lib/firebase";
 import { useSession } from "../lib/session";
 import { Button, Copy, Dialog, ErrorText, Field, Mark, Notice, useToast } from "../ui";
 
@@ -276,7 +276,7 @@ export function NotStaff() {
   return (
     <Shell
       title="No staff role yet"
-      lead="You're signed in, but this account hasn't been given a staff role. Send an admin your account ID below; once they grant a role and a second admin approves it, sign in again."
+      lead="You're signed in, but this account doesn't have a staff role. Ask a Konduct admin to add your email on the Staff page, then sign in again."
     >
       <div className="stack">
         <p className="small">
@@ -297,6 +297,47 @@ export function NotStaff() {
           Sign out
         </button>
       </div>
+    </Shell>
+  );
+}
+
+/** First sign-in of staff an admin added: replace the one-time password with their own. */
+export function ChoosePassword() {
+  const s = useSession();
+  const [next, setNext] = useState("");
+  const [again, setAgain] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (next.length < 10) return setError("Use at least 10 characters for a staff password.");
+    if (next !== again) return setError("The two passwords don't match.");
+    setBusy(true);
+    setError(null);
+    try {
+      await updatePassword(auth.currentUser!, next);
+      await call("staffPasswordChosen");
+      await s.refresh();
+    } catch (err) {
+      setError((err as Error).message && !codeOf(err) ? (err as Error).message : authMessage(codeOf(err)));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Shell title="Choose your password" lead="You signed in with a one-time password from an admin. Pick your own now; only you will know it.">
+      <form className="stack" onSubmit={save}>
+        <Field label="New password" value={next} onChange={setNext} type="password" autoComplete="new-password" required autoFocus hint="At least 10 characters." />
+        <Field label="New password again" value={again} onChange={setAgain} type="password" autoComplete="new-password" required />
+        <ErrorText>{error}</ErrorText>
+        <Button type="submit" busy={busy} disabled={!next || !again}>
+          Save and continue
+        </Button>
+        <button type="button" className="link" onClick={s.signOut}>
+          Sign out
+        </button>
+      </form>
     </Shell>
   );
 }

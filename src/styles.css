@@ -1069,3 +1069,35 @@ textarea {
 .button-link .field {
   flex: 1;
 }
+
+/* The welcome message an admin copies for new staff. */
+.message-box {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  font: 14px/1.5 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* All people: filters above the table, and clickable rows. */
+.filter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px 180px;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+@media (max-width: 640px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+}
+tr.clickable {
+  cursor: pointer;
+}
+tr.clickable:hover td {
+  background: var(--paper);
+}

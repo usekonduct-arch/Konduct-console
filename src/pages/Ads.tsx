@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { collection, query } from "firebase/firestore";
+import { collection, doc, query } from "firebase/firestore";
 
 import { call, db } from "../lib/firebase";
-import { useLiveQuery, type Row } from "../lib/live";
+import { useLiveDoc, useLiveQuery, type Row } from "../lib/live";
 import { ImageField, LinkField, SIZES, validLink } from "../lib/media";
 import { can, useSession } from "../lib/session";
 import { Badge, Button, Card, Check, Dialog, Empty, ErrorText, Field, Loading, Notice, PageHead, Select, useAction, useToast } from "../ui";
@@ -82,6 +82,7 @@ export default function Ads() {
         )}
       </Card>
       {editing ? <AdDialog ad={typeof editing === "string" ? null : editing} placement={typeof editing === "string" ? editing : editing.placement} onClose={() => setEditing(null)} /> : null}
+      <BrandCard allowed={allowed} />
     </>
   );
 }
@@ -282,5 +283,94 @@ function AdDialog({ ad, placement: initialPlacement, onClose }: { ad: Row | null
         </div>
       </form>
     </Dialog>
+  );
+}
+
+const BRAND_FIELDS = [
+  { key: "instagram", label: "Instagram", hint: "@konduct" },
+  { key: "x", label: "X (Twitter)", hint: "@konduct" },
+  { key: "tiktok", label: "TikTok", hint: "@konduct" },
+  { key: "facebook", label: "Facebook", hint: "@konduct" },
+  { key: "hashtag", label: "Hashtag", hint: "#RideKonduct" },
+  { key: "website", label: "Website", hint: "https://konduct.app" },
+] as const;
+
+type BrandKey = (typeof BRAND_FIELDS)[number]["key"];
+
+/**
+ * After paying, and at the end of their monthly Wrapped, riders and drivers can share a picture
+ * of it. The caption tags these handles and the hashtag.
+ */
+function BrandCard({ allowed }: { allowed: boolean }) {
+  const toast = useToast();
+  const brand = useLiveDoc(doc(db, "config/brand"), "brand");
+  const [edit, setEdit] = useState<Record<BrandKey, string> | null>(null);
+  const a = useAction();
+  const value = (k: BrandKey) => (brand.data?.[k] as string | undefined) ?? "";
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    if (!edit) return;
+    const r = await a.run(() => call("staffSetBrand", edit));
+    if (r) {
+      toast("Saved. New shares use these handles straight away.");
+      setEdit(null);
+    }
+  }
+
+  const caption = [
+    "Just paid my bus fare with Konduct. Tap, pay, ride.",
+    [value("instagram"), value("x")].filter(Boolean).join(" "),
+    value("hashtag"),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <Card
+      title="Social sharing"
+      actions={
+        allowed && !edit ? (
+          <Button small kind="ghost" onClick={() => setEdit(Object.fromEntries(BRAND_FIELDS.map((f) => [f.key, value(f.key)])) as Record<BrandKey, string>)}>
+            Edit
+          </Button>
+        ) : null
+      }
+    >
+      {edit ? (
+        <form className="stack" onSubmit={save}>
+          {BRAND_FIELDS.map((f) => (
+            <Field key={f.key} label={f.label} value={edit[f.key]} onChange={(v) => setEdit({ ...edit, [f.key]: v })} placeholder={f.hint} mono />
+          ))}
+          <ErrorText>{a.error}</ErrorText>
+          <div className="row">
+            <Button type="submit" busy={a.busy}>
+              Save
+            </Button>
+            <Button kind="ghost" onClick={() => setEdit(null)}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="stack">
+          <p className="small muted">
+            After paying, and at the end of their monthly Wrapped, riders and drivers can share a picture to Instagram, WhatsApp, X and more. The caption tags these
+            accounts so you see every post.
+          </p>
+          <dl className="facts">
+            {BRAND_FIELDS.map((f) => (
+              <div key={f.key} className="facts-row">
+                <dt>{f.label}</dt>
+                <dd className="mono">{value(f.key) || <span className="muted">Not set</span>}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="small">
+            Caption preview: <span className="mono">{caption}</span>
+          </p>
+        </div>
+      )}
+    </Card>
   );
 }

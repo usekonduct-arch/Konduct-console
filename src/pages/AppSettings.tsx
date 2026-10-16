@@ -63,7 +63,7 @@ export function AppVersionsCard() {
 function VersionDialog({ app, current, onClose }: { app: AppKey; current?: { minBuild: number; latestBuild: number; updateUrl: string }; onClose: () => void }) {
   const [min, setMin] = useState(String(current?.minBuild ?? 0));
   const [latest, setLatest] = useState(String(current?.latestBuild ?? 0));
-  const [url, setUrl] = useState(current?.updateUrl ?? "https://konduct.app/get");
+  const [url, setUrl] = useState(current?.updateUrl ?? "https://konduct.com.ng/get");
   const [reason, setReason] = useState("");
   const a = useAction();
   const toast = useToast();

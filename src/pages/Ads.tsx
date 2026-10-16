@@ -556,7 +556,7 @@ const BRAND_FIELDS = [
   { key: "tiktok", label: "TikTok", hint: "@konduct" },
   { key: "facebook", label: "Facebook", hint: "@konduct" },
   { key: "hashtag", label: "Hashtag", hint: "#RideKonduct" },
-  { key: "website", label: "Website", hint: "https://konduct.app" },
+  { key: "website", label: "Website", hint: "https://konduct.com.ng" },
 ] as const;
 
 type BrandKey = (typeof BRAND_FIELDS)[number]["key"];

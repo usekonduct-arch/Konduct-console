@@ -49,7 +49,7 @@ export async function fitImage(file: File, size: SizeName): Promise<string> {
   const h = img.naturalHeight * scale;
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, (width - w) / 2, (height - h) / 2, w, h);
-  for (const q of [0.88, 0.8, 0.7, 0.6, 0.5]) {
+  for (const q of [0.8, 0.72, 0.64, 0.56, 0.5]) {
     const data = canvas.toDataURL("image/jpeg", q).split(",")[1];
     if ((data.length * 3) / 4 <= MAX_BYTES) return data;
   }

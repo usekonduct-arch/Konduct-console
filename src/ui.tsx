@@ -139,7 +139,7 @@ export function Notice({ tone = "info", children }: { tone?: "info" | "warn" | "
 }
 
 /** Modal dialog with a close button; Escape closes it. */
-export function Dialog({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Dialog({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean | "xl" }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -149,7 +149,7 @@ export function Dialog({ title, onClose, children, wide }: { title: string; onCl
   }, [onClose]);
   return (
     <div className="dialog-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`dialog${wide ? " dialog-wide" : ""}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
+      <div className={`dialog${wide ? " dialog-wide" : ""}${wide === "xl" ? " dialog-xl" : ""}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <header className="dialog-head">
           <h2>{title}</h2>
           <button className="icon-btn" type="button" onClick={onClose} aria-label="Close">

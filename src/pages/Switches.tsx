@@ -29,7 +29,7 @@ type Key = "paymentsPaused" | "fundingPaused" | "payoutsPaused";
 const SWITCHES: { key: Key; label: string; effect: string }[] = [
   { key: "paymentsPaused", label: "Fare payments", effect: "Riders are told to pay cash." },
   { key: "fundingPaused", label: "Wallet top-ups", effect: "Riders can't add money." },
-  { key: "payoutsPaused", label: "Driver payouts", effect: "Earnings wait in drivers' Konduct balances." },
+  { key: "payoutsPaused", label: "Bank withdrawals", effect: "Students' and drivers' money waits in their Konduct balances." },
 ];
 
 export default function Switches() {

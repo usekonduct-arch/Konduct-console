@@ -1101,3 +1101,228 @@ tr.clickable {
 tr.clickable:hover td {
   background: var(--paper);
 }
+
+/* ads: live preview beside the editor */
+.dialog-xl {
+  width: min(100%, 1040px);
+}
+.ad-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+.ad-pv-wrap {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  .ad-editor {
+    grid-template-columns: 1fr;
+  }
+  .ad-pv-wrap {
+    position: static;
+    justify-self: center;
+    width: min(100%, 300px);
+  }
+}
+.ad-pv-phone {
+  --pv-bg: var(--paper);
+  --pv-text: var(--ink);
+  --pv-sub: var(--mute);
+  --pv-line: var(--line);
+  position: relative;
+  aspect-ratio: 9 / 18;
+  overflow: hidden;
+  border: 8px solid var(--ink);
+  border-radius: 34px;
+  background: var(--pv-bg);
+  color: var(--pv-text);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ad-pv-dark {
+  --pv-bg: var(--ink);
+  --pv-text: var(--paper);
+  --pv-sub: var(--mute-dark);
+  --pv-line: #2a313c;
+  border-color: #2a313c;
+}
+.ad-pv-greeting {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ad-pv-greeting div {
+  display: grid;
+  line-height: 1.2;
+}
+.ad-pv-greeting b {
+  font: 700 0.85rem var(--display);
+}
+.ad-pv-greeting small {
+  font-size: 0.62rem;
+  color: var(--pv-sub);
+}
+.ad-pv-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--yellow);
+}
+.ad-pv-banner,
+.ad-pv-popup-img {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--pv-line) 45%, transparent);
+  display: grid;
+  place-items: center;
+}
+.ad-pv-banner {
+  aspect-ratio: 2;
+  border-radius: 14px;
+}
+.ad-pv-banner img,
+.ad-pv-popup-img img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ad-pv-empty {
+  font-size: 0.7rem;
+  color: var(--pv-sub);
+  padding: 8px;
+  text-align: center;
+}
+.ad-pv-banner-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 9px 10px;
+  background: linear-gradient(transparent 45%, rgba(0, 0, 0, 0.67));
+  color: #fff;
+}
+.ad-pv-banner-text b {
+  flex: 1;
+  min-width: 0;
+  font: 700 0.75rem/1.15 var(--display);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ad-pv-pill {
+  flex: none;
+  background: var(--yellow);
+  color: var(--ink);
+  font: 800 0.6rem var(--body);
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+.ad-pv-dots {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-top: -6px;
+}
+.ad-pv-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pv-line);
+}
+.ad-pv-dots i.on {
+  width: 12px;
+  background: var(--yellow-deep);
+}
+.ad-pv-ghost {
+  height: 64px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pv-line) 35%, transparent);
+}
+.ad-pv-ghost.short {
+  height: 40px;
+}
+.ad-pv-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 17, 21, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 14px;
+}
+.ad-pv-popup {
+  width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--pv-bg);
+}
+.ad-pv-popup-img {
+  aspect-ratio: 4 / 5;
+}
+.ad-pv-tag {
+  position: absolute;
+  left: 8px;
+  top: 9px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font: 700 0.5rem var(--mono);
+  letter-spacing: 0.1em;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.ad-pv-close {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+.ad-pv-popup-text {
+  padding: 10px 12px 12px;
+  display: grid;
+  gap: 6px;
+}
+.ad-pv-popup-text b {
+  font: 700 0.85rem/1.15 var(--display);
+  overflow-wrap: anywhere;
+}
+.ad-pv-popup-text p {
+  margin: 0;
+  font-size: 0.66rem;
+  color: var(--pv-sub);
+  overflow-wrap: anywhere;
+}
+.ad-pv-btn {
+  text-align: center;
+  padding: 7px;
+  border-radius: 12px;
+  background: var(--yellow);
+  color: var(--ink);
+  font: 800 0.66rem var(--body);
+}
+.ad-pv-btn.alt {
+  background: var(--ink);
+  color: var(--yellow);
+}
+.ad-pv-dark .ad-pv-btn.alt {
+  background: var(--ink-3);
+}

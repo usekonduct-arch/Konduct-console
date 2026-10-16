@@ -9,7 +9,7 @@ import { Badge, Button, Card, Dialog, Empty, ErrorText, Field, Loading, Notice, 
 
 /** Mirrors CHECKERS in konduct-backend/functions/src/domain/approvals.ts. */
 const KINDS: Record<string, { label: string; checkers: StaffRole[] }> = {
-  payout_account: { label: "Driver payout bank account", checkers: ["admin", "ops"] },
+  payout_account: { label: "Withdrawal bank account (student or driver)", checkers: ["admin", "ops"] },
   refund: { label: "Refund over ₦5,000", checkers: ["admin", "ops"] },
   deposit_assign: { label: "Assign a bank deposit", checkers: ["admin", "ops"] },
   ledger_adjustment: { label: "Balance adjustment", checkers: ["admin"] },

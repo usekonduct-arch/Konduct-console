@@ -12,6 +12,7 @@ const KINDS: Record<string, { label: string; checkers: StaffRole[] }> = {
   payout_account: { label: "Withdrawal bank account (student or driver)", checkers: ["admin", "ops"] },
   refund: { label: "Refund over ₦5,000", checkers: ["admin", "ops"] },
   deposit_assign: { label: "Assign a bank deposit", checkers: ["admin", "ops"] },
+  sponsor_fund: { label: "Sponsor budget from a deposit", checkers: ["admin"] },
   ledger_adjustment: { label: "Balance adjustment", checkers: ["admin"] },
   kyc_tier: { label: "Change limits", checkers: ["admin"] },
   role_grant: { label: "Staff role", checkers: ["admin"] },

@@ -1326,3 +1326,73 @@ tr.clickable:hover td {
 .ad-pv-dark .ad-pv-btn.alt {
   background: var(--ink-3);
 }
+
+/* sponsors: logos, report tiles, and a print layout so a report can go to the sponsor as a PDF */
+.sponsor-logo {
+  flex: none;
+  object-fit: contain;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 3px;
+}
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+.field.compact {
+  gap: 2px;
+}
+.field.compact input {
+  padding: 6px 8px;
+}
+tr.selected td {
+  background: color-mix(in srgb, var(--yellow) 22%, transparent);
+}
+.report-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+.stat {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+.stat-value {
+  font: 800 1.6rem/1.1 var(--display);
+  margin: 4px 0 2px;
+}
+.how-counted ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+@media print {
+  /* The sticker rule above hides everything else; a sponsor report prints on its own the same way. */
+  #print-report,
+  #print-report * {
+    visibility: visible;
+  }
+  #print-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  #print-report .no-print {
+    display: none !important;
+  }
+  #print-report details > ul {
+    display: grid;
+  }
+}

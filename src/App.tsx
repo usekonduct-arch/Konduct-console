@@ -3,6 +3,7 @@ import { useEffect, useState, type ComponentType } from "react";
 import { can, useSession, type StaffRole } from "./lib/session";
 import { ChangePasswordDialog, ChoosePassword, EnrolMfa, NotStaff, ReauthMfa, SignIn, VerifyEmail } from "./pages/Auth";
 import Ads from "./pages/Ads";
+import Sponsors from "./pages/Sponsors";
 import Approvals from "./pages/Approvals";
 import Audit from "./pages/Audit";
 import Dashboard from "./pages/Dashboard";
@@ -36,6 +37,7 @@ const PAGES: Page[] = [
   { path: "approvals", label: "Approvals", icon: "✓", component: Approvals, show: (_r, reader) => reader },
   { path: "notifications", label: "Notifications", icon: "♪", component: Notifications, show: (r, reader) => reader || can.message(r) },
   { path: "ads", label: "Ads", icon: "▤", component: Ads, show: (r, reader) => reader || can.message(r) },
+  { path: "sponsors", label: "Sponsors", icon: "✦", component: Sponsors, show: (r, reader) => reader || can.message(r) },
   { path: "support", label: "Support chats", icon: "✉", component: Support, show: (_r, reader) => reader },
   { path: "disputes", label: "Disputes", icon: "⚑", component: Disputes, show: (_r, reader) => reader },
   { path: "deposits", label: "Deposits", icon: "₦", component: Deposits, show: (_r, reader) => reader },

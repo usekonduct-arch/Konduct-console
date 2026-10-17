@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { collection, doc, query } from "firebase/firestore";
+import { collection, doc, orderBy, query } from "firebase/firestore";
 
 import { call, db } from "../lib/firebase";
 import { useLiveDoc, useLiveQuery, type Row } from "../lib/live";
@@ -45,6 +45,7 @@ function state(
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const num = (n: unknown) => (typeof n === "number" ? n.toLocaleString("en-NG") : "0");
 /** ms → the value a datetime-local input wants, in the browser's time zone. */
 function toLocal(ms: number | null | undefined) {
   if (!ms) return "";
@@ -99,6 +100,7 @@ export default function Ads() {
                   <th>Ad</th>
                   <th>Where</th>
                   <th>Leads to</th>
+                  <th className="num">Views · reach · taps</th>
                   <th>Status</th>
                   <th />
                 </tr>
@@ -142,6 +144,8 @@ function AdRow({
   const toast = useToast();
   const st = state(ad);
   const buttons = (ad.buttons ?? []) as AdButton[];
+  // Counted by the apps and checked by the backend (adstats.ts); details in Sponsors → Report.
+  const stats = useLiveDoc(doc(db, `adStats/ad_${ad.id}`), `adstats-${ad.id}`);
 
   async function toggle() {
     const {
@@ -170,6 +174,7 @@ function AdRow({
         startsAtMs: startsAtMs ?? null,
         endsAtMs: endsAtMs ?? null,
         order: order ?? 0,
+        sponsorId: ad.sponsorId ?? "", // keep the sponsor, or their report loses this ad
       }),
     );
     if (r) toast(ad.active ? "Switched off." : "Switched on.");
@@ -215,6 +220,9 @@ function AdRow({
         {!ad.link && !buttons.length ? (
           <span className="muted">Nothing</span>
         ) : null}
+      </td>
+      <td className="num small mono">
+        {num(stats.data?.views)} · {num(stats.data?.reach)} · {num(stats.data?.taps)}
       </td>
       <td>
         <Badge tone={st.tone}>{st.label}</Badge>
@@ -262,6 +270,8 @@ function AdDialog({
   const [starts, setStarts] = useState(toLocal(ad?.startsAtMs));
   const [ends, setEnds] = useState(toLocal(ad?.endsAtMs));
   const [order, setOrder] = useState(String(ad?.order ?? 0));
+  const [sponsorId, setSponsorId] = useState<string>(ad?.sponsorId ?? "");
+  const sponsors = useLiveQuery(query(collection(db, "sponsors"), orderBy("name")), "sponsors");
 
   const setButton = (i: number, b: Partial<AdButton>) =>
     setButtons((bs) => bs.map((x, j) => (j === i ? { ...x, ...b } : x)));
@@ -290,6 +300,7 @@ function AdDialog({
         startsAtMs: fromLocal(starts),
         endsAtMs: fromLocal(ends),
         order: n,
+        sponsorId,
       }),
     );
     if (r) {
@@ -336,6 +347,12 @@ function AdDialog({
               ]}
             />
           </div>
+          <Select
+            label="Sponsor (their report counts this ad)"
+            value={sponsorId}
+            onChange={setSponsorId}
+            options={[{ value: "", label: "None: a Konduct ad" }, ...sponsors.data.map((sp) => ({ value: sp.id, label: String(sp.name) }))]}
+          />
           <ImageField
             key={placement}
             label="Picture"

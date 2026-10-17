@@ -13,6 +13,8 @@ export const SIZES = {
   carousel: { width: 1200, height: 600, label: "1200 × 600 px (2:1)" },
   popup: { width: 1080, height: 1350, label: "1080 × 1350 px (4:5)" },
   notice: { width: 1200, height: 600, label: "1200 × 600 px (2:1)" },
+  /** Sponsor logos: fitted whole (never cropped) on white, so any logo shape stays readable. */
+  logo: { width: 512, height: 512, label: "512 × 512 px, kept whole on white" },
 } as const;
 export type SizeName = keyof typeof SIZES;
 
@@ -44,7 +46,8 @@ export async function fitImage(file: File, size: SizeName): Promise<string> {
   const ctx = canvas.getContext("2d")!;
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
-  const scale = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+  // Logos are fitted inside with a margin; everything else fills the frame and is cropped.
+  const scale = size === "logo" ? Math.min((width * 0.88) / img.naturalWidth, (height * 0.88) / img.naturalHeight) : Math.max(width / img.naturalWidth, height / img.naturalHeight);
   const w = img.naturalWidth * scale;
   const h = img.naturalHeight * scale;
   ctx.imageSmoothingQuality = "high";

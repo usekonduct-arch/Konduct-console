@@ -21,6 +21,8 @@ import Support from "./pages/Support";
 import Switches from "./pages/Switches";
 import Vehicles from "./pages/Vehicles";
 import Waitlist from "./pages/Waitlist";
+import BlogPage from "./pages/Blog";
+import CareersPage from "./pages/Careers";
 import { Mark } from "./ui";
 
 type Page = { path: string; label: string; icon: string; component: ComponentType; show: (r: StaffRole | null, reader: boolean) => boolean };
@@ -45,6 +47,8 @@ const PAGES: Page[] = [
   { path: "staff", label: "Staff", icon: "★", component: Staff, show: (r) => can.grantRoles(r) },
   { path: "audit", label: "Audit log", icon: "≡", component: Audit, show: (r) => can.readAudit(r) },
   { path: "waitlist", label: "Pilot sign-ups", icon: "✎", component: Waitlist, show: (_r, reader) => reader },
+  { path: "blog", label: "Website blog", icon: "¶", component: BlogPage, show: (r) => can.editSite(r) },
+  { path: "careers", label: "Careers & applicants", icon: "✧", component: CareersPage, show: (r) => can.editSite(r) },
 ];
 
 function useHashPath(): string {

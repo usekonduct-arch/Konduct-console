@@ -90,4 +90,6 @@ export const can = {
   grantRoles: (r: StaffRole | null) => r === "admin",
   readAudit: (r: StaffRole | null) => r === "admin" || r === "auditor",
   message: (r: StaffRole | null) => r === "ops" || r === "admin",
+  /** The website's blog, job openings and the applications they bring in. */
+  editSite: (r: StaffRole | null) => r === "ops" || r === "admin",
 };

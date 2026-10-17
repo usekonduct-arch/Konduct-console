@@ -13,6 +13,8 @@ export const SIZES = {
   carousel: { width: 1200, height: 600, label: "1200 × 600 px (2:1)" },
   popup: { width: 1080, height: 1350, label: "1080 × 1350 px (4:5)" },
   notice: { width: 1200, height: 600, label: "1200 × 600 px (2:1)" },
+  /** Blog covers: the size Google, WhatsApp and X use for link previews. */
+  cover: { width: 1200, height: 630, label: "1200 × 630 px" },
   /** Sponsor logos: fitted whole (never cropped) on white, so any logo shape stays readable. */
   logo: { width: 512, height: 512, label: "512 × 512 px, kept whole on white" },
 } as const;
